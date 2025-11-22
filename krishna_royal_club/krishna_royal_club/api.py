@@ -495,3 +495,337 @@ def test_connection():
 			"success": False,
 			"error": str(e)
 		}
+
+
+@frappe.whitelist(allow_guest=True, methods=['GET', 'POST'])
+def get_service_items(item_group=None):
+	"""
+	API endpoint to get all Item records where item_group matches the specified group
+	
+	Args:
+		item_group: Item group name (default: "Services")
+		Can be passed as query parameter (GET) or in request body (POST)
+	
+	Returns:
+		Dictionary with success status and list of service items
+	"""
+	try:
+		frappe.logger().info("=== GET SERVICE ITEMS API CALLED ===")
+		
+		# Handle both GET (query params) and POST (request body) methods
+		if not item_group:
+			# Try to get from request args (for GET requests)
+			item_group = frappe.form_dict.get('item_group', 'Services')
+		
+		frappe.logger().info(f"Fetching items for item_group: {item_group}")
+		
+		# Get all items with the specified item_group
+		items = frappe.get_all(
+			"Item",
+			filters={
+				"item_group": item_group,
+				"disabled": 0  # Only get enabled items
+			},
+			fields=[
+				"name",
+				"item_code",
+				"item_name",
+				"item_group",
+				"description",
+				"image"
+			],
+			order_by="item_name asc"
+		)
+		
+		frappe.logger().info(f"Found {len(items)} items for item_group: {item_group}")
+		
+		# Format the response
+		service_items = []
+		for item in items:
+			service_items.append({
+				"name": item.get("name"),
+				"item_code": item.get("item_code"),
+				"item_name": item.get("item_name") or item.get("item_code"),
+				"item_group": item.get("item_group"),
+				"description": item.get("description") or "",
+				"image": item.get("image") or ""
+			})
+		
+		return {
+			"success": True,
+			"items": service_items,
+			"count": len(service_items)
+		}
+		
+	except Exception as e:
+		frappe.db.rollback()
+		error_msg = str(e)
+		frappe.log_error(f"Error fetching service items: {error_msg}", "Get Service Items API")
+		frappe.logger().error(f"Unexpected error: {error_msg}")
+		return {
+			"success": False,
+			"error": f"Failed to fetch service items: {error_msg}",
+			"items": [],
+			"count": 0
+		}
+
+
+@frappe.whitelist(allow_guest=True)
+def create_service_booking(**kwargs):
+	"""
+	API endpoint to create a Sales Order for service booking
+	
+	Args:
+		**kwargs: Booking information
+			- item_code: Item code for the service (required)
+			- from_date: From date for the service (required)
+			- to_date: To date for the service (required)
+			- number_of_people: Number of people (required)
+	
+	Returns:
+		Dictionary with success status and sales order name
+	
+	Note:
+		- transaction_date = from_date
+		- delivery_date = to_date
+		- qty = difference in days between from_date and to_date
+	"""
+	try:
+		# Get data from kwargs
+		data = kwargs
+		
+		# Log the received data for debugging
+		frappe.logger().info("=== CREATE SERVICE BOOKING API CALLED ===")
+		frappe.logger().info(f"Received data: {data}")
+		
+		# Get item_code
+		item_code = data.get('item_code')
+		
+		# Validate required fields
+		if not item_code:
+			return {
+				"success": False,
+				"error": "Service item is required"
+			}
+		
+		required_fields = ['from_date', 'to_date', 'number_of_people']
+		for field in required_fields:
+			if not data.get(field):
+				error_msg = f"{field.replace('_', ' ').title()} is required"
+				frappe.logger().error(f"Validation failed: {error_msg}")
+				return {
+					"success": False,
+					"error": error_msg
+				}
+		
+		frappe.logger().info(f"Creating booking for service item: {item_code}")
+		
+		# Validate and calculate days from date difference
+		from frappe.utils import getdate, date_diff, formatdate
+		
+		try:
+			from_date = getdate(data.get('from_date'))
+			to_date = getdate(data.get('to_date'))
+			
+			if to_date < from_date:
+				return {
+					"success": False,
+					"error": "To Date must be after or equal to From Date"
+				}
+			
+			# Calculate difference in days (inclusive of both dates)
+			calculated_days = date_diff(to_date, from_date) + 1
+			
+			# Ensure minimum 1 day
+			if calculated_days < 1:
+				calculated_days = 1
+			
+			# Format dates as DD-MM-YYYY
+			from_date_formatted = formatdate(from_date, "dd-MM-yyyy")
+			to_date_formatted = formatdate(to_date, "dd-MM-yyyy")
+			
+			frappe.logger().info(f"From Date: {from_date}, To Date: {to_date}, Calculated days: {calculated_days}")
+		except Exception as e:
+			frappe.logger().error(f"Invalid date value: {str(e)}")
+			return {
+				"success": False,
+				"error": f"Invalid date format: {str(e)}"
+			}
+		
+		# Get user email from request data or session
+		# Try to get from session first (if authenticated)
+		user_email = None
+		if frappe.session.user and frappe.session.user != "Guest":
+			user_email = frappe.session.user
+			frappe.logger().info(f"Using session user: {user_email}")
+		else:
+			# If not in session, try to get from request data
+			user_email = data.get('user_email') or data.get('email')
+			if not user_email:
+				frappe.logger().error("User email not provided and not authenticated")
+				return {
+					"success": False,
+					"error": "Authentication required. Please log in to book a service."
+				}
+			frappe.logger().info(f"Using email from request: {user_email}")
+		
+		# Get User document
+		if not frappe.db.exists("User", user_email):
+			frappe.logger().error(f"User not found: {user_email}")
+			return {
+				"success": False,
+				"error": "User account not found. Please contact support."
+			}
+		
+		user = frappe.get_doc("User", user_email)
+		
+		# Get or Create Customer
+		customer_name = None
+		
+		# Try to find existing customer by email
+		customer_exists = frappe.db.exists("Customer", {"email_id": user_email})
+		
+		if customer_exists:
+			customer_name = customer_exists
+			frappe.logger().info(f"Found existing customer: {customer_name}")
+		else:
+			# Create new Customer
+			customer_name = user.full_name or f"{user.first_name} {user.last_name}".strip() or "Customer"
+			
+			# Generate unique customer name if duplicate exists
+			base_customer_name = customer_name
+			counter = 1
+			while frappe.db.exists("Customer", customer_name):
+				customer_name = f"{base_customer_name}-{counter}"
+				counter += 1
+			
+			frappe.logger().info(f"Creating new customer: {customer_name}")
+			
+			customer_doc = frappe.get_doc({
+				"doctype": "Customer",
+				"customer_name": customer_name,
+				"customer_type": "Individual",
+				"customer_group": "Individual",
+				"territory": "All Territories",
+				"email_id": user_email,
+				"mobile_no": user.mobile_no or "",
+				"phone_no": user.mobile_no or "",
+				"company": frappe.defaults.get_user_default("Company") or frappe.db.get_single_value("Global Defaults", "default_company")
+			})
+			
+			customer_doc.insert(ignore_permissions=True)
+			customer_name = customer_doc.name
+			frappe.logger().info(f"Customer created successfully: {customer_name}")
+		
+		# Get Item details
+		if not frappe.db.exists("Item", item_code):
+			frappe.logger().error(f"Item not found: {item_code}")
+			return {
+				"success": False,
+				"error": f"Service item '{item_code}' not found"
+			}
+		
+		item = frappe.get_doc("Item", item_code)
+		
+		# Get item's standard rate (from price list or item itself)
+		rate = 0
+		if item.standard_rate:
+			rate = item.standard_rate
+		else:
+			# Try to get price from Price List
+			price_list = frappe.db.get_value("Price List", {"selling": 1, "enabled": 1}, "name")
+			if price_list:
+				item_price = frappe.db.get_value(
+					"Item Price",
+					{"item_code": item_code, "price_list": price_list},
+					"price_list_rate"
+				)
+				if item_price:
+					rate = item_price
+		
+		# Calculate item total: rate * days
+		total_amount = rate * calculated_days
+		
+		number_of_people = int(data.get('number_of_people', 1))
+		
+		# Format item description: "Double Room for 2 Occupants from 22-11-2025 till 24-11-2025"
+		item_description = f"{item.item_name} for {number_of_people} Occupant{'s' if number_of_people > 1 else ''} from {from_date_formatted} till {to_date_formatted}"
+		
+		frappe.logger().info(f"Item {item_code} ({item.item_name}) - Rate: {rate}, Days: {calculated_days}, Total: {total_amount}")
+		frappe.logger().info(f"Item Description: {item_description}")
+		
+		# Prepare sales order item
+		sales_order_item = {
+			"item_code": item_code,
+			"item_name": item.item_name,
+			"description": item_description,  # Custom description with booking details
+			"qty": calculated_days,  # Qty = days difference
+			"rate": rate,  # Rate per day
+			"uom": "Day"  # Unit of measure
+		}
+		
+		# Create Sales Order
+		frappe.logger().info(f"Creating Sales Order for customer: {customer_name}")
+		
+		sales_order = frappe.get_doc({
+			"doctype": "Sales Order",
+			"customer": customer_name,
+			"transaction_date": from_date,  # transaction_date = from_date
+			"delivery_date": to_date,  # delivery_date = to_date
+			"company": frappe.defaults.get_user_default("Company") or frappe.db.get_single_value("Global Defaults", "default_company"),
+			"items": [sales_order_item],
+			"po_no": f"Service Booking - {number_of_people} people, {calculated_days} day(s)",
+			"po_date": from_date
+		})
+		
+		# Add booking details in comments
+		booking_details = f"Service Booking Details:\n"
+		booking_details += f"From Date: {from_date}\n"
+		booking_details += f"To Date: {to_date}\n"
+		booking_details += f"Number of Days: {calculated_days} day(s)\n"
+		booking_details += f"Number of People: {number_of_people}\n"
+		booking_details += f"Service: {item.item_name} ({item_code})\n"
+		booking_details += f"Total Amount: {total_amount}\n"
+		
+		# Insert Sales Order (in draft mode)
+		sales_order.insert(ignore_permissions=True)
+		frappe.logger().info(f"Sales Order created in draft mode: {sales_order.name}")
+		
+		# Add booking details as comment
+		try:
+			sales_order.add_comment("Comment", booking_details)
+		except Exception as comment_error:
+			frappe.logger().warning(f"Could not add comment: {str(comment_error)}")
+		
+		# Sales Order is created in draft mode (not submitted)
+		# This allows for review and approval before finalizing
+		
+		# Commit the transaction
+		frappe.db.commit()
+		
+		frappe.logger().info(f"Service booking created successfully in draft mode: {sales_order.name}")
+		
+		return {
+			"success": True,
+			"message": "Service booking created successfully",
+			"sales_order": sales_order.name,
+			"customer": customer_name
+		}
+		
+	except frappe.ValidationError as e:
+		frappe.db.rollback()
+		error_msg = str(e)
+		frappe.logger().error(f"Validation error: {error_msg}")
+		return {
+			"success": False,
+			"error": error_msg
+		}
+	except Exception as e:
+		frappe.db.rollback()
+		error_msg = str(e)
+		frappe.log_error(f"Error creating service booking: {error_msg}", "Service Booking API")
+		frappe.logger().error(f"Unexpected error: {error_msg}")
+		return {
+			"success": False,
+			"error": f"Failed to create service booking: {error_msg}"
+		}
