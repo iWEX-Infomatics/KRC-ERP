@@ -1,0 +1,172 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2025-11-24 16:32:38.571914",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "guest",
+  "service_type",
+  "from_date",
+  "to_date",
+  "no_of_guests",
+  "nationality",
+  "id_proofs_section",
+  "passport_number",
+  "visa_number",
+  "id_proof_type",
+  "id_proof_number",
+  "user_photo",
+  "column_break_nqwh",
+  "rfid_card_no",
+  "check_in_time",
+  "check_out_time",
+  "roommates_section",
+  "roommates",
+  "key_transaction_id",
+  "amended_from"
+ ],
+ "fields": [
+  {
+   "fieldname": "guest",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Guest Name",
+   "options": "User",
+   "reqd": 1
+  },
+  {
+   "fieldname": "service_type",
+   "fieldtype": "Link",
+   "label": "Service Type",
+   "options": "Service Type"
+  },
+  {
+   "fieldname": "from_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "From Date",
+   "reqd": 1
+  },
+  {
+   "fieldname": "to_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "To Date",
+   "reqd": 1
+  },
+  {
+   "fieldname": "no_of_guests",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Number of Guests",
+   "reqd": 1
+  },
+  {
+   "fieldname": "nationality",
+   "fieldtype": "Data",
+   "label": "Nationality",
+   "reqd": 1
+  },
+  {
+   "fieldname": "id_proofs_section",
+   "fieldtype": "Section Break",
+   "label": "ID Proofs"
+  },
+  {
+   "depends_on": "eval:doc.nationality && doc.nationality.toLowerCase() !== 'indian'",
+   "fieldname": "passport_number",
+   "fieldtype": "Data",
+   "label": "Passport Number",
+   "mandatory_depends_on": "eval:doc.nationality && doc.nationality.toLowerCase() !== 'indian'"
+  },
+  {
+   "depends_on": "eval:doc.nationality && doc.nationality.toLowerCase() !== 'indian'",
+   "fieldname": "visa_number",
+   "fieldtype": "Data",
+   "label": "Visa Number",
+   "mandatory_depends_on": "eval:doc.nationality && doc.nationality.toLowerCase() !== 'indian'"
+  },
+  {
+   "fieldname": "id_proof_type",
+   "fieldtype": "Select",
+   "label": "ID Proof Type",
+   "options": "Aadhar Card\nDriving License\nPassport\nVoter ID\nOther"
+  },
+  {
+   "fieldname": "id_proof_number",
+   "fieldtype": "Data",
+   "label": "ID Proof Number"
+  },
+  {
+   "fieldname": "user_photo",
+   "fieldtype": "Attach Image",
+   "label": "User Photo"
+  },
+  {
+   "fieldname": "column_break_nqwh",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "rfid_card_no",
+   "fieldtype": "Data",
+   "label": "RFID Card No"
+  },
+  {
+   "default": "14:00:00",
+   "description": "Check-in after 2 PM",
+   "fieldname": "check_in_time",
+   "fieldtype": "Time",
+   "label": "Check-in Time"
+  },
+  {
+   "default": "11:00:00",
+   "description": "Checkout before 11 AM",
+   "fieldname": "check_out_time",
+   "fieldtype": "Time",
+   "label": "Check-out Time"
+  },
+  {
+   "fieldname": "roommates_section",
+   "fieldtype": "Section Break",
+   "label": "Roommates Details"
+  },
+  {
+   "fieldname": "roommates",
+   "fieldtype": "Table",
+   "label": "Roommates",
+   "options": "Roommate detail"
+  },
+  {
+   "fieldname": "key_transaction_id",
+   "fieldtype": "Data",
+   "label": "Key Transaction ID",
+   "read_only": 1
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Guest Onboarding",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2025-11-24 17:51:21.150140",
+ "modified_by": "Administrator",
+ "module": "krishna_royal_club",
+ "name": "Roommate detail",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

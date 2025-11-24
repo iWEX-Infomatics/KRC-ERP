@@ -7,7 +7,9 @@ import frappe
 from frappe import _
 import re
 import json
+import base64
 from frappe.utils import now_datetime
+from frappe.utils.file_manager import save_file
 
 
 @frappe.whitelist(allow_guest=True)
@@ -539,16 +541,36 @@ def get_service_items(item_group=None):
 		
 		frappe.logger().info(f"Found {len(items)} items for item_group: {item_group}")
 		
-		# Format the response
+		# Format the response with rate information
 		service_items = []
 		for item in items:
+			item_code = item.get("item_code")
+			item_doc = frappe.get_doc("Item", item_code)
+			
+			# Get item's standard rate (from price list or item itself)
+			rate = 0
+			if item_doc.standard_rate:
+				rate = item_doc.standard_rate
+			else:
+				# Try to get price from Price List
+				price_list = frappe.db.get_value("Price List", {"selling": 1, "enabled": 1}, "name")
+				if price_list:
+					item_price = frappe.db.get_value(
+						"Item Price",
+						{"item_code": item_code, "price_list": price_list},
+						"price_list_rate"
+					)
+					if item_price:
+						rate = item_price
+			
 			service_items.append({
 				"name": item.get("name"),
-				"item_code": item.get("item_code"),
-				"item_name": item.get("item_name") or item.get("item_code"),
+				"item_code": item_code,
+				"item_name": item.get("item_name") or item_code,
 				"item_group": item.get("item_group"),
 				"description": item.get("description") or "",
-				"image": item.get("image") or ""
+				"image": item.get("image") or "",
+				"rate": rate
 			})
 		
 		return {
@@ -571,13 +593,230 @@ def get_service_items(item_group=None):
 
 
 @frappe.whitelist(allow_guest=True)
+def create_guest_onboarding(**kwargs):
+	"""
+	Create Guest Onboarding document based on data submitted from the frontend
+	"""
+	try:
+		data = {}
+
+		# Merge kwargs and JSON body
+		if kwargs:
+			data.update(kwargs)
+		
+		if frappe.request and frappe.request.data:
+			try:
+				json_data = frappe.request.get_json(force=True, silent=True)
+				if json_data:
+					data.update(json_data)
+			except Exception:
+				pass
+
+		data = frappe._dict(data)
+
+		# Determine user email
+		if frappe.session.user and frappe.session.user != "Guest":
+			user_email = frappe.session.user
+		else:
+			user_email = data.get("user_email") or data.get("email")
+		
+		if not user_email:
+			return {
+				"success": False,
+				"error": "Authentication required. Please log in to continue."
+			}
+
+		if not frappe.db.exists("User", user_email):
+			return {
+				"success": False,
+				"error": "User not found. Please contact support."
+			}
+
+		user = frappe.get_doc("User", user_email)
+
+		# Get or Create Customer
+		customer_name = None
+		
+		# Try to find existing customer by email
+		customer_exists = frappe.db.exists("Customer", {"email_id": user_email})
+		
+		if customer_exists:
+			customer_name = customer_exists
+			frappe.logger().info(f"Found existing customer: {customer_name}")
+		else:
+			# Create new Customer
+			customer_name = user.full_name or f"{user.first_name} {user.last_name}".strip() or "Customer"
+			
+			# Generate unique customer name if duplicate exists
+			base_customer_name = customer_name
+			counter = 1
+			while frappe.db.exists("Customer", customer_name):
+				customer_name = f"{base_customer_name}-{counter}"
+				counter += 1
+			
+			frappe.logger().info(f"Creating new customer: {customer_name}")
+			
+			customer_doc = frappe.get_doc({
+				"doctype": "Customer",
+				"customer_name": customer_name,
+				"customer_type": "Individual",
+				"customer_group": "Individual",
+				"territory": "All Territories",
+				"email_id": user_email,
+				"mobile_no": user.mobile_no if hasattr(user, 'mobile_no') else None
+			})
+			customer_doc.insert(ignore_permissions=True)
+			frappe.db.commit()
+			customer_name = customer_doc.name
+			frappe.logger().info(f"Customer created successfully: {customer_name}")
+
+		# Validate required fields
+		required_fields = ["from_date", "to_date", "no_of_guests", "nationality"]
+		for field in required_fields:
+			if not data.get(field):
+				return {
+					"success": False,
+					"error": f"{field.replace('_', ' ').title()} is required"
+				}
+
+		# Helper to ensure list data
+		def ensure_list(value):
+			if not value:
+				return []
+			if isinstance(value, str):
+				try:
+					return json.loads(value)
+				except Exception:
+					return []
+			return value
+
+		service_type_entries = ensure_list(data.get("service_type"))
+		roommate_entries = ensure_list(data.get("roommates"))
+
+		# Normalize time values (HH:MM -> HH:MM:SS)
+		def normalize_time(value):
+			if not value:
+				return None
+			value = str(value)
+			return value if len(value.split(":")) == 3 else f"{value}:00"
+
+		onboarding_doc = frappe.get_doc({
+			"doctype": "Guest Onboarding",
+			"guest": customer_name,
+			"from_date": data.get("from_date"),
+			"to_date": data.get("to_date"),
+			"no_of_guests": data.get("no_of_guests"),
+			"nationality": data.get("nationality"),
+			"id_proof_type": data.get("id_proof_type"),
+			"id_proof_number": data.get("id_proof_number"),
+			"passport_number": data.get("passport_number"),
+			"visa_number": data.get("visa_number"),
+			"check_in_time": None,
+			"check_out_time": None
+		})
+
+		# Append service type child table
+		for service in service_type_entries:
+			service_code = service.get("service_type") or service.get("item_code")
+			if not service_code:
+				continue
+			onboarding_doc.append("service_type", {
+				"service_type": service_code,
+				"rate": service.get("rate") or 0
+			})
+
+		# Append roommates child table
+		roommate_photos = []  # Store photos to process after insert
+		for roommate in roommate_entries:
+			onboarding_doc.append("roommates", {
+				"guest": roommate.get("guest"),
+				"service_type": roommate.get("service_type"),
+				"from_date": roommate.get("from_date"),
+				"to_date": roommate.get("to_date"),
+				"no_of_guests": roommate.get("no_of_guests"),
+				"nationality": roommate.get("nationality"),
+				"id_proof_type": roommate.get("id_proof_type"),
+				"id_proof_number": roommate.get("id_proof_number")
+			})
+			# Store photo data for processing after insert
+			if roommate.get("user_photo"):
+				roommate_photos.append({
+					"photo_data": roommate.get("user_photo"),
+					"photo_filename": roommate.get("user_photo_filename"),
+					"idx": len(roommate_photos) + 1
+				})
+
+		onboarding_doc.insert(ignore_permissions=True)
+
+		# Explicitly clear check_in_time and check_out_time to ensure they remain blank
+		onboarding_doc.db_set("check_in_time", None)
+		onboarding_doc.db_set("check_out_time", None)
+
+		# Handle user photo upload
+		user_photo_data = data.get("user_photo")
+		if user_photo_data:
+			try:
+				file_content = user_photo_data
+				if "base64," in file_content:
+					file_content = file_content.split("base64,")[-1]
+				file_bytes = base64.b64decode(file_content)
+				file_name = data.get("user_photo_filename") or f"user-photo-{onboarding_doc.name}.png"
+				saved_file = save_file(file_name, file_bytes, onboarding_doc.doctype, onboarding_doc.name, is_private=0)
+				onboarding_doc.db_set("user_photo", saved_file.file_url)
+			except Exception as file_error:
+				frappe.logger().warning(f"Could not save user photo: {str(file_error)}")
+
+		# Handle roommate photos upload
+		onboarding_doc.reload()
+		for photo_info in roommate_photos:
+			try:
+				file_content = photo_info["photo_data"]
+				if "base64," in file_content:
+					file_content = file_content.split("base64,")[-1]
+				file_bytes = base64.b64decode(file_content)
+				file_name = photo_info["photo_filename"] or f"roommate-{photo_info['idx']}-photo-{onboarding_doc.name}.png"
+				saved_file = save_file(file_name, file_bytes, "Roommate detail", onboarding_doc.name, is_private=0)
+				# Update the roommate row's user_photo field using idx
+				roommate_row = onboarding_doc.roommates[photo_info["idx"] - 1]
+				roommate_row.user_photo = saved_file.file_url
+				onboarding_doc.save(ignore_permissions=True)
+			except Exception as file_error:
+				frappe.logger().warning(f"Could not save roommate {photo_info['idx']} photo: {str(file_error)}")
+
+		frappe.db.commit()
+
+		return {
+			"success": True,
+			"message": "Guest onboarding created successfully",
+			"guest_onboarding": onboarding_doc.name
+		}
+
+	except frappe.ValidationError as e:
+		frappe.db.rollback()
+		error_msg = str(e)
+		frappe.logger().error(f"Validation error creating guest onboarding: {error_msg}")
+		return {
+			"success": False,
+			"error": error_msg
+		}
+	except Exception as e:
+		frappe.db.rollback()
+		error_msg = str(e)
+		frappe.log_error(f"Error creating guest onboarding: {error_msg}", "Create Guest Onboarding API")
+		frappe.logger().error(f"Unexpected error creating guest onboarding: {error_msg}")
+		return {
+			"success": False,
+			"error": f"Failed to create guest onboarding: {error_msg}"
+		}
+
+@frappe.whitelist(allow_guest=True)
 def create_service_booking(**kwargs):
 	"""
 	API endpoint to create a Sales Order for service booking
 	
 	Args:
 		**kwargs: Booking information
-			- item_code: Item code for the service (required)
+			- item_codes: List of item codes for the services (required) - can be single item or multiple
 			- from_date: From date for the service (required)
 			- to_date: To date for the service (required)
 			- number_of_people: Number of people (required)
@@ -586,9 +825,10 @@ def create_service_booking(**kwargs):
 		Dictionary with success status and sales order name
 	
 	Note:
-		- transaction_date = from_date
-		- delivery_date = to_date
-		- qty = difference in days between from_date and to_date
+		- transaction_date = creation date (today)
+		- delivery_date = from_date
+		- qty = staying_days (difference in days between from_date and to_date)
+		- Multiple items will create multiple line items in the Sales Order
 	"""
 	try:
 		# Get data from kwargs
@@ -598,14 +838,23 @@ def create_service_booking(**kwargs):
 		frappe.logger().info("=== CREATE SERVICE BOOKING API CALLED ===")
 		frappe.logger().info(f"Received data: {data}")
 		
-		# Get item_code
-		item_code = data.get('item_code')
+		# Get item_codes (support both single item_code and multiple item_codes)
+		item_codes = data.get('item_codes', [])
+		if not item_codes:
+			# Fallback to single item_code for backward compatibility
+			item_code_single = data.get('item_code')
+			if item_code_single:
+				item_codes = [item_code_single]
+		
+		# Ensure item_codes is a list
+		if not isinstance(item_codes, list):
+			item_codes = [item_codes] if item_codes else []
 		
 		# Validate required fields
-		if not item_code:
+		if not item_codes or len(item_codes) == 0:
 			return {
 				"success": False,
-				"error": "Service item is required"
+				"error": "At least one service item is required"
 			}
 		
 		required_fields = ['from_date', 'to_date', 'number_of_people']
@@ -618,7 +867,7 @@ def create_service_booking(**kwargs):
 					"error": error_msg
 				}
 		
-		frappe.logger().info(f"Creating booking for service item: {item_code}")
+		frappe.logger().info(f"Creating booking for {len(item_codes)} service item(s): {item_codes}")
 		
 		# Validate and calculate days from date difference
 		from frappe.utils import getdate, date_diff, formatdate
@@ -717,66 +966,143 @@ def create_service_booking(**kwargs):
 			customer_name = customer_doc.name
 			frappe.logger().info(f"Customer created successfully: {customer_name}")
 		
-		# Get Item details
-		if not frappe.db.exists("Item", item_code):
-			frappe.logger().error(f"Item not found: {item_code}")
-			return {
-				"success": False,
-				"error": f"Service item '{item_code}' not found"
-			}
+		# Create Address if address_data is provided
+		address_name = None
+		address_data = data.get('address_data')
+		frappe.logger().info(f"=== ADDRESS DATA CHECK ===")
+		frappe.logger().info(f"address_data received: {address_data}")
+		frappe.logger().info(f"address_data type: {type(address_data)}")
+		frappe.logger().info(f"address_data is None: {address_data is None}")
+		frappe.logger().info(f"address_data is empty dict: {address_data == {}}")
 		
-		item = frappe.get_doc("Item", item_code)
+		if address_data:
+			try:
+				frappe.logger().info("=== CREATING ADDRESS FROM CHECKOUT DATA ===")
+				frappe.logger().info(f"Address data received: {address_data}")
+				
+				# Validate required address fields
+				if not address_data.get('address_line1') or not address_data.get('city') or not address_data.get('state') or not address_data.get('pincode'):
+					frappe.logger().warning("Incomplete address data provided, skipping address creation")
+					frappe.logger().warning(f"Missing fields - address_line1: {bool(address_data.get('address_line1'))}, city: {bool(address_data.get('city'))}, state: {bool(address_data.get('state'))}, pincode: {bool(address_data.get('pincode'))}")
+				else:
+					# Generate address title if not provided
+					address_title = address_data.get('address_title') or f"{customer_name}-{address_data.get('address_type', 'Shipping')}"
+					
+					frappe.logger().info(f"Creating Address with title: {address_title}")
+					
+					# Create Address document
+					address_doc = frappe.get_doc({
+						"doctype": "Address",
+						"address_title": address_title,
+						"address_type": address_data.get('address_type', 'Shipping'),
+						"address_line1": address_data.get('address_line1', ''),
+						"address_line2": address_data.get('address_line2', ''),
+						"city": address_data.get('city', ''),
+						"state": address_data.get('state', ''),
+						"pincode": address_data.get('pincode', ''),
+						"country": address_data.get('country', 'India'),
+						"phone": address_data.get('phone', ''),
+						"email_id": address_data.get('email_id', user_email),
+						"is_primary_address": address_data.get('is_primary_address', False),
+						"is_shipping_address": address_data.get('is_shipping_address', True),
+						"is_billing_address": address_data.get('is_billing_address', False),
+						"links": [{
+							"link_doctype": "Customer",
+							"link_name": customer_name
+						}]
+					})
+					
+					address_doc.insert(ignore_permissions=True)
+					frappe.db.commit()  # Commit immediately after insert
+					address_name = address_doc.name
+					frappe.logger().info(f"✅ Address created successfully: {address_name}")
+					frappe.logger().info(f"Address details - Title: {address_title}, Type: {address_data.get('address_type', 'Shipping')}, City: {address_data.get('city')}")
+			except Exception as address_error:
+				frappe.logger().error(f"❌ Error creating address: {str(address_error)}")
+				frappe.log_error(f"Error creating address: {str(address_error)}", "Create Address API")
+				# Continue with Sales Order creation even if address creation fails
 		
-		# Get item's standard rate (from price list or item itself)
-		rate = 0
-		if item.standard_rate:
-			rate = item.standard_rate
-		else:
-			# Try to get price from Price List
-			price_list = frappe.db.get_value("Price List", {"selling": 1, "enabled": 1}, "name")
-			if price_list:
-				item_price = frappe.db.get_value(
-					"Item Price",
-					{"item_code": item_code, "price_list": price_list},
-					"price_list_rate"
-				)
-				if item_price:
-					rate = item_price
-		
-		# Calculate item total: rate * days
-		total_amount = rate * calculated_days
-		
+		# Get Item details for all selected items
+		sales_order_items = []
+		total_amount = 0
 		number_of_people = int(data.get('number_of_people', 1))
 		
-		# Format item description: "Double Room for 2 Occupants from 22-11-2025 till 24-11-2025"
-		item_description = f"{item.item_name} for {number_of_people} Occupant{'s' if number_of_people > 1 else ''} from {from_date_formatted} till {to_date_formatted}"
-		
-		frappe.logger().info(f"Item {item_code} ({item.item_name}) - Rate: {rate}, Days: {calculated_days}, Total: {total_amount}")
-		frappe.logger().info(f"Item Description: {item_description}")
-		
-		# Prepare sales order item
-		sales_order_item = {
-			"item_code": item_code,
-			"item_name": item.item_name,
-			"description": item_description,  # Custom description with booking details
-			"qty": calculated_days,  # Qty = days difference
-			"rate": rate,  # Rate per day
-			"uom": "Day"  # Unit of measure
-		}
+		for item_code in item_codes:
+			if not frappe.db.exists("Item", item_code):
+				frappe.logger().error(f"Item not found: {item_code}")
+				return {
+					"success": False,
+					"error": f"Service item '{item_code}' not found"
+				}
+			
+			item = frappe.get_doc("Item", item_code)
+			
+			# Get item's standard rate (from price list or item itself)
+			rate = 0
+			if item.standard_rate:
+				rate = item.standard_rate
+			else:
+				# Try to get price from Price List
+				price_list = frappe.db.get_value("Price List", {"selling": 1, "enabled": 1}, "name")
+				if price_list:
+					item_price = frappe.db.get_value(
+						"Item Price",
+						{"item_code": item_code, "price_list": price_list},
+						"price_list_rate"
+					)
+					if item_price:
+						rate = item_price
+			
+			# Calculate item total: rate * days
+			item_total = rate * calculated_days
+			total_amount += item_total
+			
+			# Format item description: "Double Room for 2 Occupants from 22-11-2025 till 24-11-2025"
+			item_description = f"{item.item_name} for {number_of_people} Occupant{'s' if number_of_people > 1 else ''} from {from_date_formatted} till {to_date_formatted}"
+			
+			frappe.logger().info(f"Item {item_code} ({item.item_name}) - Rate: {rate}, Days: {calculated_days}, Total: {item_total}")
+			frappe.logger().info(f"Item Description: {item_description}")
+			
+			# Get UOM from item (stock_uom) or default to "Day"
+			item_uom = "Day"  # Default UOM
+			if hasattr(item, 'stock_uom') and item.stock_uom:
+				item_uom = item.stock_uom
+			elif hasattr(item, 'uom') and item.uom:
+				item_uom = item.uom
+			
+			# Add item to sales order items list
+			sales_order_items.append({
+				"item_code": item_code,
+				"item_name": item.item_name,
+				"description": item_description,  # Custom description with booking details
+				"qty": calculated_days,  # Qty = days difference
+				"rate": rate,  # Rate per day
+				"uom": item_uom  # Use stock_uom if available, otherwise "Day"
+			})
 		
 		# Create Sales Order
 		frappe.logger().info(f"Creating Sales Order for customer: {customer_name}")
 		
-		sales_order = frappe.get_doc({
+		# Prepare Sales Order data
+		sales_order_data = {
 			"doctype": "Sales Order",
 			"customer": customer_name,
-			"transaction_date": from_date,  # transaction_date = from_date
-			"delivery_date": to_date,  # delivery_date = to_date
+			"transaction_date": frappe.utils.today(),  # transaction_date = creation date (today)
+			"delivery_date": from_date,  # delivery_date = from_date
 			"company": frappe.defaults.get_user_default("Company") or frappe.db.get_single_value("Global Defaults", "default_company"),
-			"items": [sales_order_item],
-			"po_no": f"Service Booking - {number_of_people} people, {calculated_days} day(s)",
-			"po_date": from_date
-		})
+			"items": sales_order_items,  # Multiple items
+			# "po_no": f"Service Booking - {number_of_people} people, {calculated_days} day(s), {len(item_codes)} service(s)",
+			# "po_date": from_date
+		}
+		
+		# Set shipping address if address was created
+		if address_name:
+			sales_order_data["shipping_address_name"] = address_name
+			frappe.logger().info(f"Setting shipping address in Sales Order: {address_name}")
+		else:
+			frappe.logger().warning("No address created, Sales Order will not have shipping address")
+		
+		sales_order = frappe.get_doc(sales_order_data)
 		
 		# Add booking details in comments
 		booking_details = f"Service Booking Details:\n"
@@ -784,7 +1110,10 @@ def create_service_booking(**kwargs):
 		booking_details += f"To Date: {to_date}\n"
 		booking_details += f"Number of Days: {calculated_days} day(s)\n"
 		booking_details += f"Number of People: {number_of_people}\n"
-		booking_details += f"Service: {item.item_name} ({item_code})\n"
+		booking_details += f"Services Selected: {len(item_codes)} service(s)\n"
+		for idx, item_code in enumerate(item_codes, 1):
+			item_name = frappe.db.get_value("Item", item_code, "item_name") or item_code
+			booking_details += f"  {idx}. {item_name} ({item_code})\n"
 		booking_details += f"Total Amount: {total_amount}\n"
 		
 		# Insert Sales Order (in draft mode)
@@ -828,4 +1157,120 @@ def create_service_booking(**kwargs):
 		return {
 			"success": False,
 			"error": f"Failed to create service booking: {error_msg}"
+		}
+
+
+@frappe.whitelist(allow_guest=True)
+def create_opportunity_from_cart(**kwargs):
+	"""
+	API endpoint to create an Opportunity when items are added to cart.
+	Only sets the two required fields: opportunity_from and party_name.
+	
+	Args:
+		**kwargs: Cart item information
+			- user_email: Email of the logged-in user (required if not authenticated)
+	
+	Returns:
+		Dictionary with success status and opportunity name
+	"""
+	try:
+		data = kwargs
+		frappe.logger().info("=== CREATE OPPORTUNITY FROM CART API CALLED ===")
+		frappe.logger().info(f"Received data: {data}")
+		
+		# Get user email from request data or session
+		user_email = None
+		if frappe.session.user and frappe.session.user != "Guest":
+			user_email = frappe.session.user
+			frappe.logger().info(f"Using session user: {user_email}")
+		else:
+			user_email = data.get('user_email') or data.get('email')
+			if not user_email:
+				frappe.logger().error("User email not provided and not authenticated")
+				return {
+					"success": False,
+					"error": "Authentication required. Please log in to add to cart."
+				}
+			frappe.logger().info(f"Using email from request: {user_email}")
+		
+		# Get User document
+		if not frappe.db.exists("User", user_email):
+			frappe.logger().error(f"User not found: {user_email}")
+			return {
+				"success": False,
+				"error": "User account not found. Please contact support."
+			}
+		
+		user = frappe.get_doc("User", user_email)
+		
+		# Get or find Lead for the user
+		lead_name = None
+		lead_list = frappe.get_all("Lead", filters={"email_id": user_email}, fields=["name", "lead_name"], limit=1)
+		
+		if lead_list and len(lead_list) > 0:
+			lead_name = lead_list[0].name
+			frappe.logger().info(f"Found existing lead: {lead_name}")
+		else:
+			# Create new Lead if doesn't exist
+			lead_name = user.full_name or f"{user.first_name} {user.last_name}".strip() or "Customer"
+			
+			# Generate unique lead name if duplicate exists
+			base_lead_name = lead_name
+			counter = 1
+			while frappe.db.exists("Lead", {"lead_name": lead_name}):
+				lead_name = f"{base_lead_name}-{counter}"
+				counter += 1
+			
+			frappe.logger().info(f"Creating new lead: {lead_name}")
+			
+			lead_doc = frappe.get_doc({
+				"doctype": "Lead",
+				"lead_name": lead_name,
+				"email_id": user_email,
+				"mobile_no": user.mobile_no or "",
+				"phone": user.mobile_no or "",
+				"status": "Lead",
+				"territory": "All Territories",
+				"company": frappe.defaults.get_user_default("Company") or frappe.db.get_single_value("Global Defaults", "default_company")
+			})
+			
+			lead_doc.insert(ignore_permissions=True)
+			lead_name = lead_doc.name
+			frappe.logger().info(f"Lead created successfully: {lead_name}")
+		
+		# Create Opportunity with only the two required fields
+		frappe.logger().info(f"Creating Opportunity for lead: {lead_name}")
+		
+		opportunity = frappe.get_doc({
+			"doctype": "Opportunity",
+			"opportunity_from": "Lead",
+			"party_name": lead_name
+		})
+		
+		opportunity.insert(ignore_permissions=True)
+		frappe.db.commit()
+		frappe.logger().info(f"Opportunity created successfully: {opportunity.name}")
+		
+		return {
+			"success": True,
+			"message": "Opportunity created successfully",
+			"opportunity_name": opportunity.name
+		}
+		
+	except frappe.ValidationError as e:
+		frappe.db.rollback()
+		error_msg = str(e)
+		frappe.logger().error(f"Validation error creating opportunity: {error_msg}")
+		return {
+			"success": False,
+			"error": error_msg
+		}
+	except Exception as e:
+		frappe.db.rollback()
+		error_msg = str(e)
+		frappe.log_error(f"Error creating opportunity: {error_msg}", "Create Opportunity API")
+		frappe.logger().error(f"Unexpected error creating opportunity: {error_msg}")
+		return {
+			"success": False,
+			"error": f"Failed to create opportunity: {error_msg}"
 		}

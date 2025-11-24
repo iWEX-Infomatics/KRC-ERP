@@ -1,0 +1,202 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "Guest-Onboarding-.#####",
+ "creation": "2025-11-24 16:30:59.402918",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "guest",
+  "from_date",
+  "to_date",
+  "column_break_cvhg",
+  "user_photo",
+  "no_of_guests",
+  "nationality",
+  "id_proofs_section",
+  "id_proof_type",
+  "id_proof_number",
+  "passport_number",
+  "visa_number",
+  "column_break_nqwh",
+  "rfid_card_no",
+  "check_in_time",
+  "check_out_time",
+  "status",
+  "section_break_zwon",
+  "service_type",
+  "roommates_section",
+  "roommates",
+  "key_transaction_id",
+  "amended_from"
+ ],
+ "fields": [
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Guest Onboarding",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "guest",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Guest Name",
+   "options": "Customer",
+   "reqd": 1
+  },
+  {
+   "fieldname": "service_type",
+   "fieldtype": "Table",
+   "label": "Service Type",
+   "options": "Service Type"
+  },
+  {
+   "fieldname": "from_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "From Date",
+   "reqd": 1
+  },
+  {
+   "fieldname": "to_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "To Date",
+   "reqd": 1
+  },
+  {
+   "fieldname": "no_of_guests",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Number of Guests",
+   "reqd": 1
+  },
+  {
+   "fieldname": "nationality",
+   "fieldtype": "Data",
+   "label": "Nationality",
+   "reqd": 1
+  },
+  {
+   "fieldname": "id_proofs_section",
+   "fieldtype": "Section Break",
+   "label": "ID Proofs"
+  },
+  {
+   "depends_on": "eval:doc.id_proof_type == \"Passport\"",
+   "fieldname": "passport_number",
+   "fieldtype": "Data",
+   "label": "Passport Number",
+   "mandatory_depends_on": "eval:doc.nationality && doc.nationality.toLowerCase() !== 'indian'"
+  },
+  {
+   "depends_on": "eval:doc.passport_number",
+   "fieldname": "visa_number",
+   "fieldtype": "Data",
+   "label": "Visa Number",
+   "mandatory_depends_on": "eval:doc.nationality && doc.nationality.toLowerCase() !== 'indian'"
+  },
+  {
+   "fieldname": "id_proof_type",
+   "fieldtype": "Select",
+   "label": "ID Proof Type",
+   "options": "Aadhar Card\nDriving License\nPassport\nVoter ID\nOther"
+  },
+  {
+   "fieldname": "id_proof_number",
+   "fieldtype": "Data",
+   "label": "ID Proof Number"
+  },
+  {
+   "fieldname": "user_photo",
+   "fieldtype": "Attach Image",
+   "label": "User Photo"
+  },
+  {
+   "fieldname": "column_break_nqwh",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "rfid_card_no",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "label": "RFID Card No"
+  },
+  {
+   "fieldname": "check_in_time",
+   "fieldtype": "Time",
+   "label": "Check-in Time"
+  },
+  {
+   "fieldname": "check_out_time",
+   "fieldtype": "Time",
+   "label": "Check-out Time"
+  },
+  {
+   "fieldname": "roommates_section",
+   "fieldtype": "Section Break",
+   "label": "Roommates Details"
+  },
+  {
+   "fieldname": "roommates",
+   "fieldtype": "Table",
+   "label": "Roommates",
+   "options": "Roommate detail"
+  },
+  {
+   "fieldname": "key_transaction_id",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "label": "Key Transaction ID",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_cvhg",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "section_break_zwon",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Checked In\nChecked Out\nBilled\nCompleted"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "is_submittable": 1,
+ "links": [],
+ "modified": "2025-11-24 18:03:26.872778",
+ "modified_by": "Administrator",
+ "module": "krishna_royal_club",
+ "name": "Guest Onboarding",
+ "naming_rule": "Expression (old style)",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}
