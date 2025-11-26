@@ -137,13 +137,14 @@ app_license = "mit"
 # ---------------
 # Hook on document methods and events
 
-# doc_events = {
-# 	"*": {
-# 		"on_update": "method",
-# 		"on_cancel": "method",
-# 		"on_trash": "method"
-# 	}
-# }
+doc_events = {
+    "Sales Order": {
+        "validate": "krishna_royal_club.krishna_royal_club.sales_order.ensure_single_sales_order",
+        "on_submit": "krishna_royal_club.krishna_royal_club.sales_order.create_project_template"
+    }
+}
+
+
 
 # Scheduled Tasks
 # ---------------

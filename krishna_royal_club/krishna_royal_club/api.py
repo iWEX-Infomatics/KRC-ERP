@@ -8,6 +8,7 @@ from frappe import _
 import re
 import json
 import base64
+import requests
 from frappe.utils import now_datetime
 from frappe.utils.file_manager import save_file
 
@@ -1274,3 +1275,52 @@ def create_opportunity_from_cart(**kwargs):
 			"success": False,
 			"error": f"Failed to create opportunity: {error_msg}"
 		}
+
+
+@frappe.whitelist(allow_guest=True)
+def get_post_offices_api(pincode):
+	"""
+	API endpoint to fetch post offices for Indian Pincode
+	Uses the postalpincode.in API
+	
+	Args:
+		pincode: 6-digit Indian pincode
+	
+	Returns:
+		List of post office dictionaries with post_office, district, state, etc.
+	"""
+	if not pincode:
+		return []
+	
+	# Validate pincode format (6 digits)
+	if not re.match(r'^\d{6}$', str(pincode)):
+		return []
+	
+	url = f"https://api.postalpincode.in/pincode/{pincode}"
+	headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
+	
+	try:
+		resp = requests.get(url, timeout=5, headers=headers)
+		data = resp.json()
+	except Exception as e:
+		frappe.log_error(frappe.get_traceback(), "Pincode API Error")
+		frappe.logger().error(f"Error fetching post offices for pincode {pincode}: {str(e)}")
+		return []
+	
+	if not data or not isinstance(data, list) or len(data) == 0:
+		return []
+	
+	if data[0].get("Status") != "Success":
+		return []
+	
+	result = []
+	for po in data[0].get("PostOffice", []):
+		result.append({
+			"post_office": po.get("Name", ""),
+			"taluk": po.get("Block") or po.get("Name", ""),
+			"state": po.get("State", ""),
+			"district": po.get("District", ""),
+			"country": po.get("Country") or "India"
+		})
+	
+	return result

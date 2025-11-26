@@ -167,14 +167,14 @@
    "fieldname": "status",
    "fieldtype": "Select",
    "label": "Status",
-   "options": "Checked In\nChecked Out\nBilled\nCompleted"
+   "options": "\nChecked In\nChecked Out\nBilled\nCompleted"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2025-11-24 18:03:26.872778",
+ "modified": "2025-11-24 18:25:04.198443",
  "modified_by": "Administrator",
  "module": "krishna_royal_club",
  "name": "Guest Onboarding",

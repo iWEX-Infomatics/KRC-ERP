@@ -2,32 +2,33 @@ import frappe
 from frappe.model.document import Document
 
 class GuestOnboarding(Document):
+
     def on_submit(self):
+        self.create_sales_order()
 
-        # Use the real field name
-        customer = self.guest   # <-- Your field is 'guest'
+    def create_sales_order(self):
+        # Create Sales Order
+        so = frappe.new_doc("Sales Order")
+        so.customer = self.guest
+        so.delivery_date = self.from_date
+        so.transaction_date = frappe.utils.today()
 
-        if not customer:
-            frappe.throw("Guest not selected in Guest Onboarding")
+        # Child table loop
+        for row in self.service_type:
+            item_code = row.service_type
+            rate = row.rate
 
-        # Get latest Sales Order for this guest
-        latest_so = frappe.db.get_list(
-            "Sales Order",
-            filters={"customer": customer},
-            fields=["name", "status", "docstatus"],
-            order_by="creation desc",
-            limit=1
-        )
+            # UOM get from Item master
+            uom = frappe.db.get_value("Item", item_code, "stock_uom")
 
-        if not latest_so:
-            frappe.msgprint(f"No Sales Order found for guest {customer}")
-            return
+            so.append("items", {
+                "item_code": item_code,
+                "qty": 1,
+                "rate": rate,
+                "uom": uom
+            })
 
-        so_name = latest_so[0].name
-        so_doc = frappe.get_doc("Sales Order", so_name)
+        # Save and Submit SO
+        so.insert(ignore_permissions=True)
 
-        # if so_doc.docstatus == 0:
-        #     so_doc.submit()
-        #     frappe.msgprint(f"Sales Order {so_name} submitted automatically.")
-        # else:
-        #     frappe.msgprint(f"Sales Order {so_name} is already submitted.")
+        frappe.msgprint(f"Sales Order <b>{so.name}</b> created successfully.")
