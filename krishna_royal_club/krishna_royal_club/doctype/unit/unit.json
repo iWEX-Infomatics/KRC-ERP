@@ -1,0 +1,76 @@
+{
+ "actions": [],
+ "creation": "2025-12-10 16:03:26.705631",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "unit_name",
+  "resort",
+  "room_type",
+  "column_break_yhvs",
+  "capacity",
+  "status",
+  "description"
+ ],
+ "fields": [
+  {
+   "fieldname": "unit_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Unit Name",
+   "reqd": 1
+  },
+  {
+   "fieldname": "resort",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Resort",
+   "options": "Resort",
+   "reqd": 1
+  },
+  {
+   "fieldname": "room_type",
+   "fieldtype": "Data",
+   "label": "Room Type"
+  },
+  {
+   "fieldname": "capacity",
+   "fieldtype": "Int",
+   "label": "Capacity"
+  },
+  {
+   "default": "Active",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Active\nInactive"
+  },
+  {
+   "fieldname": "description",
+   "fieldtype": "Small Text",
+   "label": "Description"
+  },
+  {
+   "fieldname": "column_break_yhvs",
+   "fieldtype": "Column Break"
+  }
+ ],
+ "links": [],
+ "modified": "2025-12-10 16:06:50.108882",
+ "modified_by": "Administrator",
+ "module": "krishna_royal_club",
+ "name": "Unit",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "read": 1,
+   "role": "System Manager",
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

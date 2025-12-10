@@ -1,0 +1,65 @@
+{
+ "actions": [],
+ "creation": "2025-12-10 16:04:33.407524",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "resort_name",
+  "location",
+  "address",
+  "column_break_ujpj",
+  "total_units",
+  "description"
+ ],
+ "fields": [
+  {
+   "fieldname": "resort_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Resort Name",
+   "reqd": 1
+  },
+  {
+   "fieldname": "location",
+   "fieldtype": "Data",
+   "label": "Location"
+  },
+  {
+   "fieldname": "address",
+   "fieldtype": "Small Text",
+   "label": "Address"
+  },
+  {
+   "fieldname": "total_units",
+   "fieldtype": "Int",
+   "label": "Total Units"
+  },
+  {
+   "fieldname": "description",
+   "fieldtype": "Small Text",
+   "label": "Description"
+  },
+  {
+   "fieldname": "column_break_ujpj",
+   "fieldtype": "Column Break"
+  }
+ ],
+ "links": [],
+ "modified": "2025-12-10 16:06:59.308021",
+ "modified_by": "Administrator",
+ "module": "krishna_royal_club",
+ "name": "Resort",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "read": 1,
+   "role": "System Manager",
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

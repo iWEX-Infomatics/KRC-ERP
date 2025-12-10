@@ -1,0 +1,43 @@
+{
+    "doctype": "DocType",
+    "name": "Season",
+    "module": "krishna_royal_club",
+    "custom": 0,
+    "fields": [
+        {
+            "fieldname": "season_name",
+            "label": "Season Name",
+            "fieldtype": "Data",
+            "reqd": 1
+        },
+        {
+            "fieldname": "start_date",
+            "label": "Start Date",
+            "fieldtype": "Date"
+        },
+        {
+            "fieldname": "end_date",
+            "label": "End Date",
+            "fieldtype": "Date"
+        },
+        {
+            "fieldname": "category",
+            "label": "Category",
+            "fieldtype": "Select",
+            "options": "Peak\nHigh\nLow"
+        },
+        {
+            "fieldname": "notes",
+            "label": "Notes",
+            "fieldtype": "Small Text"
+        }
+    ],
+    "permissions": [
+        {
+            "role": "System Manager",
+            "read": 1,
+            "write": 1,
+            "create": 1
+        }
+    ]
+}

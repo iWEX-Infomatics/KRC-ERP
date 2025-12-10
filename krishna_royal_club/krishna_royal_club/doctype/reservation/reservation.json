@@ -1,0 +1,71 @@
+{
+    "doctype": "DocType",
+    "name": "Reservation",
+    "module": "krishna_royal_club",
+    "custom": 0,
+    "fields": [
+        {
+            "fieldname": "member",
+            "label": "Member",
+            "fieldtype": "Link",
+            "options": "Customer",
+            "reqd": 1
+        },
+        {
+            "fieldname": "resort",
+            "label": "Resort",
+            "fieldtype": "Link",
+            "options": "Resort",
+            "reqd": 1
+        },
+        {
+            "fieldname": "unit",
+            "label": "Unit",
+            "fieldtype": "Link",
+            "options": "Unit"
+        },
+        {
+            "fieldname": "check_in",
+            "label": "Check In",
+            "fieldtype": "Date",
+            "reqd": 1
+        },
+        {
+            "fieldname": "check_out",
+            "label": "Check Out",
+            "fieldtype": "Date",
+            "reqd": 1
+        },
+        {
+            "fieldname": "nights",
+            "label": "Nights",
+            "fieldtype": "Int",
+            "read_only": 1
+        },
+        {
+            "fieldname": "status",
+            "label": "Status",
+            "fieldtype": "Select",
+            "options": "Draft\nConfirmed\nChecked In\nChecked Out\nCancelled",
+            "default": "Draft"
+        },
+        {
+            "fieldname": "booking_reference",
+            "label": "Booking Reference",
+            "fieldtype": "Data"
+        },
+        {
+            "fieldname": "remarks",
+            "label": "Remarks",
+            "fieldtype": "Small Text"
+        }
+    ],
+    "permissions": [
+        {
+            "role": "System Manager",
+            "read": 1,
+            "write": 1,
+            "create": 1
+        }
+    ]
+}

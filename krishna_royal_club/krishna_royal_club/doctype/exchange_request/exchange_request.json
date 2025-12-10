@@ -1,0 +1,15 @@
+{
+  "doctype": "DocType",
+  "name": "Exchange Request",
+  "module": "krishna_royal_club",
+  "custom": 0,
+  "fields": [
+    {"fieldname": "member", "label": "Member", "fieldtype": "Link", "options": "Customer", "reqd": 1},
+    {"fieldname": "from_week", "label": "From Week", "fieldtype": "Date"},
+    {"fieldname": "to_week", "label": "To Week", "fieldtype": "Date"},
+    {"fieldname": "reservation", "label": "Reservation", "fieldtype": "Link", "options": "Reservation"},
+    {"fieldname": "reason", "label": "Reason", "fieldtype": "Small Text"},
+    {"fieldname": "status", "label": "Status", "fieldtype": "Select", "options": "Pending\nApproved\nRejected", "default": "Pending"}
+  ],
+  "permissions": [{"role": "System Manager", "read": 1, "write": 1, "create": 1}]
+}

@@ -1,0 +1,112 @@
+{
+ "actions": [],
+ "creation": "2025-12-10 17:49:19.010675",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "lead",
+  "customer",
+  "resort",
+  "visit_date",
+  "visit_time",
+  "visit_type",
+  "status",
+  "column_break_mxsi",
+  "sales_person",
+  "remarks",
+  "feedback",
+  "rating"
+ ],
+ "fields": [
+  {
+   "fieldname": "lead",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Lead",
+   "options": "Lead",
+   "reqd": 1
+  },
+  {
+   "fieldname": "customer",
+   "fieldtype": "Link",
+   "label": "Customer",
+   "options": "Customer"
+  },
+  {
+   "fieldname": "resort",
+   "fieldtype": "Link",
+   "label": "Resort",
+   "options": "Resort"
+  },
+  {
+   "fieldname": "visit_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Visit Date",
+   "reqd": 1
+  },
+  {
+   "fieldname": "visit_time",
+   "fieldtype": "Time",
+   "label": "Visit Time"
+  },
+  {
+   "default": "Site Visit",
+   "fieldname": "visit_type",
+   "fieldtype": "Select",
+   "label": "Visit Type",
+   "options": "Site Visit\nVirtual Presentation\nOffice Meeting\nOther"
+  },
+  {
+   "default": "Scheduled",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Scheduled\nCompleted\nCancelled\nNo Show"
+  },
+  {
+   "fieldname": "sales_person",
+   "fieldtype": "Link",
+   "label": "Sales Person",
+   "options": "Sales Person"
+  },
+  {
+   "fieldname": "remarks",
+   "fieldtype": "Small Text",
+   "label": "Remarks"
+  },
+  {
+   "fieldname": "feedback",
+   "fieldtype": "Small Text",
+   "label": "Feedback"
+  },
+  {
+   "fieldname": "rating",
+   "fieldtype": "Int",
+   "label": "Rating (1-5)"
+  },
+  {
+   "fieldname": "column_break_mxsi",
+   "fieldtype": "Column Break"
+  }
+ ],
+ "links": [],
+ "modified": "2025-12-10 17:49:37.019968",
+ "modified_by": "Administrator",
+ "module": "krishna_royal_club",
+ "name": "Tour Visit",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "read": 1,
+   "role": "System Manager",
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

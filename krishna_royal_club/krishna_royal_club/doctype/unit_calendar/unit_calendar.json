@@ -1,0 +1,47 @@
+{
+    "doctype": "DocType",
+    "name": "Unit Calendar",
+    "module": "krishna_royal_club",
+    "custom": 0,
+    "fields": [
+        {
+            "fieldname": "unit",
+            "label": "Unit",
+            "fieldtype": "Link",
+            "options": "Unit",
+            "reqd": 1
+        },
+        {
+            "fieldname": "date",
+            "label": "Date",
+            "fieldtype": "Date",
+            "reqd": 1
+        },
+        {
+            "fieldname": "season",
+            "label": "Season",
+            "fieldtype": "Link",
+            "options": "Season"
+        },
+        {
+            "fieldname": "is_available",
+            "label": "Available",
+            "fieldtype": "Check",
+            "default": 1
+        },
+        {
+            "fieldname": "reservation",
+            "label": "Reservation",
+            "fieldtype": "Link",
+            "options": "Reservation"
+        }
+    ],
+    "permissions": [
+        {
+            "role": "System Manager",
+            "read": 1,
+            "write": 1,
+            "create": 1
+        }
+    ]
+}
