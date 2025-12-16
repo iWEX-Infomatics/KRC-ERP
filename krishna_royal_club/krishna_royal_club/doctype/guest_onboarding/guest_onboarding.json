@@ -9,52 +9,27 @@
   "guest",
   "from_date",
   "to_date",
-  "column_break_cvhg",
-  "user_photo",
   "no_of_guests",
+  "column_break_kwna",
   "nationality",
-  "id_proofs_section",
-  "id_proof_type",
-  "id_proof_number",
   "passport_number",
   "visa_number",
-  "column_break_nqwh",
+  "id_proof_type",
+  "column_break_apvr",
+  "id_proof_number",
+  "guest_photo",
+  "room_type",
+  "room_number",
+  "column_break_brwd",
   "rfid_card_no",
   "check_in_time",
   "check_out_time",
-  "status",
-  "section_break_zwon",
-  "service_type",
   "roommates_section",
   "roommates",
   "key_transaction_id",
   "amended_from"
  ],
  "fields": [
-  {
-   "fieldname": "amended_from",
-   "fieldtype": "Link",
-   "label": "Amended From",
-   "no_copy": 1,
-   "options": "Guest Onboarding",
-   "print_hide": 1,
-   "read_only": 1,
-   "search_index": 1
-  },
-  {
-   "fieldname": "guest",
-   "fieldtype": "Link",
-   "in_list_view": 1,
-   "label": "Guest Name",
-   "options": "Customer",
-   "reqd": 1
-  },
-  {
-   "fieldname": "service_type",
-   "fieldtype": "Table",
-   "label": "Service Type",
-   "options": "Service Type"
-  },
   {
    "fieldname": "from_date",
    "fieldtype": "Date",
@@ -83,12 +58,7 @@
    "reqd": 1
   },
   {
-   "fieldname": "id_proofs_section",
-   "fieldtype": "Section Break",
-   "label": "ID Proofs"
-  },
-  {
-   "depends_on": "eval:doc.id_proof_type == \"Passport\"",
+   "depends_on": "eval:doc.nationality && doc.nationality.toLowerCase() !== 'indian'",
    "fieldname": "passport_number",
    "fieldtype": "Data",
    "label": "Passport Number",
@@ -113,26 +83,20 @@
    "label": "ID Proof Number"
   },
   {
-   "fieldname": "user_photo",
-   "fieldtype": "Attach Image",
-   "label": "User Photo"
-  },
-  {
-   "fieldname": "column_break_nqwh",
-   "fieldtype": "Column Break"
-  },
-  {
    "fieldname": "rfid_card_no",
    "fieldtype": "Data",
-   "hidden": 1,
    "label": "RFID Card No"
   },
   {
+   "default": "14:00:00",
+   "description": "Check-in after 2 PM",
    "fieldname": "check_in_time",
    "fieldtype": "Time",
    "label": "Check-in Time"
   },
   {
+   "default": "11:00:00",
+   "description": "Checkout before 11 AM",
    "fieldname": "check_out_time",
    "fieldtype": "Time",
    "label": "Check-out Time"
@@ -151,30 +115,62 @@
   {
    "fieldname": "key_transaction_id",
    "fieldtype": "Data",
-   "hidden": 1,
    "label": "Key Transaction ID",
    "read_only": 1
   },
   {
-   "fieldname": "column_break_cvhg",
+   "fieldname": "guest",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Guest Name",
+   "options": "Guest",
+   "reqd": 1
+  },
+  {
+   "fieldname": "guest_photo",
+   "fieldtype": "Attach Image",
+   "label": "Guest Photo"
+  },
+  {
+   "fieldname": "room_type",
+   "fieldtype": "Link",
+   "label": "Room Type",
+   "options": "Room Type"
+  },
+  {
+   "fieldname": "room_number",
+   "fieldtype": "Link",
+   "label": "Room Number",
+   "options": "Room"
+  },
+  {
+   "fieldname": "column_break_kwna",
    "fieldtype": "Column Break"
   },
   {
-   "fieldname": "section_break_zwon",
-   "fieldtype": "Section Break"
+   "fieldname": "column_break_apvr",
+   "fieldtype": "Column Break"
   },
   {
-   "fieldname": "status",
-   "fieldtype": "Select",
-   "label": "Status",
-   "options": "\nChecked In\nChecked Out\nBilled\nCompleted"
+   "fieldname": "column_break_brwd",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Guest Onboarding",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2025-11-24 18:25:04.198443",
+ "modified": "2025-12-15 16:59:54.084537",
  "modified_by": "Administrator",
  "module": "krishna_royal_club",
  "name": "Guest Onboarding",

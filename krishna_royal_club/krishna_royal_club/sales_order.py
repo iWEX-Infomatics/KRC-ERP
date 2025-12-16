@@ -78,4 +78,4 @@ def create_project_template(doc, method):
 
     template.insert(ignore_permissions=True)
 
-    frappe.msgprint(f"Project Template <b>{template.name}</b> created.")
+    # frappe.msgprint(f"Project Template <b>{template.name}</b> created.")
