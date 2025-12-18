@@ -242,6 +242,20 @@ doc_events = {
 # default_log_clearing_doctypes = {
 # 	"Logging DocType Name": 30  # days to retain logs
 # }
+fixtures= [
+    {
+        "doctype": "Property Setter",
+        "filters": [
+            ["module", "=", "krishna_royal_club"],
+        ]
+    },
+    {
+		"doctype": "Custom Field",
+		"filters": [
+			["module", "=", "krishna_royal_club"],
+		]
+	}
+]    
 
 cors = {
 	"allow_origins": [

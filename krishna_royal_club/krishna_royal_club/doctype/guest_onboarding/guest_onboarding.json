@@ -24,10 +24,13 @@
   "rfid_card_no",
   "check_in_time",
   "check_out_time",
+  "reference_doctype",
+  "reference_name",
   "roommates_section",
   "roommates",
   "key_transaction_id",
-  "amended_from"
+  "amended_from",
+  "connections_tab"
  ],
  "fields": [
   {
@@ -53,29 +56,30 @@
   },
   {
    "fieldname": "nationality",
-   "fieldtype": "Data",
+   "fieldtype": "Link",
    "label": "Nationality",
+   "options": "Country",
    "reqd": 1
   },
   {
-   "depends_on": "eval:doc.nationality && doc.nationality.toLowerCase() !== 'indian'",
+   "depends_on": "eval:doc.nationality !== 'India'\r\n",
    "fieldname": "passport_number",
    "fieldtype": "Data",
    "label": "Passport Number",
-   "mandatory_depends_on": "eval:doc.nationality && doc.nationality.toLowerCase() !== 'indian'"
+   "mandatory_depends_on": "eval:doc.nationality !== 'India'\r\n"
   },
   {
    "depends_on": "eval:doc.passport_number",
    "fieldname": "visa_number",
    "fieldtype": "Data",
    "label": "Visa Number",
-   "mandatory_depends_on": "eval:doc.nationality && doc.nationality.toLowerCase() !== 'indian'"
+   "mandatory_depends_on": "eval:doc.passport_number"
   },
   {
    "fieldname": "id_proof_type",
-   "fieldtype": "Select",
+   "fieldtype": "Link",
    "label": "ID Proof Type",
-   "options": "Aadhar Card\nDriving License\nPassport\nVoter ID\nOther"
+   "options": "ID Proof"
   },
   {
    "fieldname": "id_proof_number",
@@ -164,13 +168,30 @@
    "print_hide": 1,
    "read_only": 1,
    "search_index": 1
+  },
+  {
+   "fieldname": "connections_tab",
+   "fieldtype": "Tab Break",
+   "label": "Connections"
+  },
+  {
+   "fieldname": "reference_doctype",
+   "fieldtype": "Link",
+   "label": "Reference Doctype",
+   "options": "DocType"
+  },
+  {
+   "fieldname": "reference_name",
+   "fieldtype": "Dynamic Link",
+   "label": "Reference Name",
+   "options": "reference_doctype"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2025-12-15 16:59:54.084537",
+ "modified": "2025-12-18 14:57:35.740592",
  "modified_by": "Administrator",
  "module": "krishna_royal_club",
  "name": "Guest Onboarding",

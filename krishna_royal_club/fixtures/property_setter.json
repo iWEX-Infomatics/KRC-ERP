@@ -1,0 +1,18 @@
+[
+ {
+  "default_value": null,
+  "doc_type": "Sales Order",
+  "docstatus": 0,
+  "doctype": "Property Setter",
+  "doctype_or_field": "DocField",
+  "field_name": "order_type",
+  "is_system_generated": 0,
+  "modified": "2025-12-18 11:25:02.876787",
+  "module": "krishna_royal_club",
+  "name": "Sales Order-order_type-options",
+  "property": "options",
+  "property_type": "Select",
+  "row_name": null,
+  "value": "\nSales\nService\nMaintenance\nShopping Cart"
+ }
+]
