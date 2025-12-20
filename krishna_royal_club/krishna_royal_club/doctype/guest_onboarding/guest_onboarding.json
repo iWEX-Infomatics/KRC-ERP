@@ -24,6 +24,7 @@
   "rfid_card_no",
   "check_in_time",
   "check_out_time",
+  "column_break_wgcd",
   "reference_doctype",
   "reference_name",
   "roommates_section",
@@ -178,20 +179,28 @@
    "fieldname": "reference_doctype",
    "fieldtype": "Link",
    "label": "Reference Doctype",
-   "options": "DocType"
+   "no_copy": 1,
+   "options": "DocType",
+   "read_only": 1
   },
   {
    "fieldname": "reference_name",
    "fieldtype": "Dynamic Link",
    "label": "Reference Name",
-   "options": "reference_doctype"
+   "no_copy": 1,
+   "options": "reference_doctype",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_wgcd",
+   "fieldtype": "Column Break"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2025-12-18 14:57:35.740592",
+ "modified": "2025-12-20 15:38:51.467498",
  "modified_by": "Administrator",
  "module": "krishna_royal_club",
  "name": "Guest Onboarding",
