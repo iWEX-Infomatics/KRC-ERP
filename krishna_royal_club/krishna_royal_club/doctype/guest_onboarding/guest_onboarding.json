@@ -27,6 +27,7 @@
   "column_break_wgcd",
   "reference_doctype",
   "reference_name",
+  "status",
   "roommates_section",
   "roommates",
   "key_transaction_id",
@@ -184,6 +185,7 @@
    "read_only": 1
   },
   {
+   "allow_on_submit": 1,
    "fieldname": "reference_name",
    "fieldtype": "Dynamic Link",
    "label": "Reference Name",
@@ -194,13 +196,20 @@
   {
    "fieldname": "column_break_wgcd",
    "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "\nDraft\nOnboarded",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2025-12-20 15:38:51.467498",
+ "modified": "2025-12-23 12:32:05.139123",
  "modified_by": "Administrator",
  "module": "krishna_royal_club",
  "name": "Guest Onboarding",

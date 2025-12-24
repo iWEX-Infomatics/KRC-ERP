@@ -79,3 +79,60 @@ def create_project_template(doc, method):
     template.insert(ignore_permissions=True)
 
     # frappe.msgprint(f"Project Template <b>{template.name}</b> created.")
+
+
+import frappe
+
+def on_cancel_unlink_guest_onboarding(doc, method):
+    """
+    Sales Order cancel hone par:
+    - SO.custom_guest_onboarding_id clear
+    - Guest Onboarding.reference_name & reference_doctype clear
+    """
+
+    if not doc.custom_guest_onboarding_id:
+        return
+
+    try:
+        guest_onboarding = frappe.get_doc(
+            "Guest Onboarding",
+            doc.custom_guest_onboarding_id
+        )
+
+        # Clear Guest Onboarding side link
+        guest_onboarding.db_set("reference_name", None, update_modified=False)
+        guest_onboarding.db_set("reference_doctype", None, update_modified=False)
+
+        # Clear Sales Order side link
+        doc.db_set("custom_guest_onboarding_id", None, update_modified=False)
+
+    except frappe.DoesNotExistError:
+        frappe.log_error(
+            f"Guest Onboarding not found for SO {doc.name}",
+            "SO Cancel Unlink Error"
+        )
+
+def before_cancel_unlink_guest_onboarding(doc, method):
+    """
+    BEFORE cancel:
+    - Break link so Frappe link validation does not block cancel
+    """
+
+    if not doc.custom_guest_onboarding_id:
+        return
+
+    try:
+        guest = frappe.get_doc(
+            "Guest Onboarding",
+            doc.custom_guest_onboarding_id
+        )
+
+        # Break Guest Onboarding → SO link
+        guest.db_set("reference_name", None, update_modified=False)
+        guest.db_set("reference_doctype", None, update_modified=False)
+
+        # Break SO → Guest Onboarding link
+        doc.db_set("custom_guest_onboarding_id", None, update_modified=False)
+
+    except frappe.DoesNotExistError:
+        pass

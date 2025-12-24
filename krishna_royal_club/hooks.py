@@ -140,7 +140,13 @@ doctype_js = {"Quotation" : "public/js/quotation.js"}
 doc_events = {
     "Sales Order": {
         "validate": "krishna_royal_club.krishna_royal_club.sales_order.ensure_single_sales_order",
-        "on_submit": "krishna_royal_club.krishna_royal_club.sales_order.create_project_template"
+        "on_submit": "krishna_royal_club.krishna_royal_club.sales_order.create_project_template",
+		"before_cancel": "krishna_royal_club.krishna_royal_club.sales_order.before_cancel_unlink_guest_onboarding",
+        "on_cancel": "krishna_royal_club.krishna_royal_club.sales_order.on_cancel_unlink_guest_onboarding"
+    },
+    "Guest Onboarding": {
+        "before_cancel": "krishna_royal_club.krishna_royal_club.doctype.guest_onboarding.guest_onboarding.before_cancel_unlink_sales_order",
+        "on_cancel": "krishna_royal_club.krishna_royal_club.doctype.guest_onboarding.guest_onboarding.on_cancel_unlink_sales_order"
     }
 }
 
